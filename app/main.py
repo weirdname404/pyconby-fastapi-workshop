@@ -1,16 +1,11 @@
 from fastapi import FastAPI, Depends
-from pydantic import BaseModel
+from typing import List
 from sqlalchemy.orm import Session
 
-from . import models
+from . import models, crud, schemas
 from .database import SessionLocal, engine
 
 app = FastAPI()
-
-
-class UserCreate(BaseModel):
-    email: str
-    password: str
 
 
 def get_db():
@@ -23,22 +18,23 @@ def get_db():
 
 @app.get('/')
 def read_root():
-    return {"msg": "yo"}
+    return {"msg": "sanity check"}
 
 
-@app.get('/users/{user_id}')
+@app.get('/users/', response_model=List[schemas.User])
+def read_users(skip: int = 0, limit: int = 3, db: Session = Depends(get_db)):
+    users = crud.get_users(db, skip=skip, limit=limit)
+    return users
+
+
+@app.get('/users/{user_id}', response_model=schemas.User)
 def read_user(user_id: int, db: Session = Depends(get_db)):
-    return db.query(models.User).first()
+    return crud.get_user(db, user_id=user_id)
 
 
-@app.post('/users/')
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    hash_pass = f"fake-{user.password}"
-    new_user = models.User(email=user.email, hashed_password=hash_pass)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
+@app.post('/users/', response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    return crud.create_user(db=db, user=user)
 
 
 @app.on_event("startup")
