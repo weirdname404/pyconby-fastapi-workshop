@@ -22,3 +22,11 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.commit()
     db.refresh(new_user)
     return new_user
+
+
+def get_items(db: Session, item: schemas.ItemCreate, user_id: int):
+    item = models.Item(**item.dict(), owner_id=user_id)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
